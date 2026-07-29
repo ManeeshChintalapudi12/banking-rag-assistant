@@ -10,6 +10,7 @@ import logging
 import os
 
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.models import HealthResponse, QueryRequest, QueryResponse
@@ -47,3 +48,10 @@ def query(request: QueryRequest) -> QueryResponse:
     except Exception as exc:  # pragma: no cover - defensive catch-all
         logger.exception("Unhandled error answering query")
         raise HTTPException(status_code=500, detail="Internal error") from exc
+
+
+# Mounted last so it never shadows the /health or /query routes above —
+# Starlette matches explicit routes before falling through to a mount.
+_UI_DIR = os.path.join(os.path.dirname(__file__), "..", "ui")
+if os.path.isdir(_UI_DIR):
+    app.mount("/", StaticFiles(directory=_UI_DIR, html=True), name="ui")

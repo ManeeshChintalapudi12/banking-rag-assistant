@@ -6,6 +6,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
+COPY ui ./ui
 COPY data/sample_docs ./data/sample_docs
 
 # Build the vector index at image build time so the container is

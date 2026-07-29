@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Banking Policy &amp; Compliance Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #1b2a41;
+    --paper: #edeff2;
+    --paper-raised: #ffffff;
+    --rule: #c9cfd8;
+    --brass: #8a6a2f;
+    --brass-dim: #d8c9a3;
+    --grounded: #2f6f4e;
+    --flagged: #a6432d;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+    --serif: "Source Serif 4", Georgia, serif;
+    --sans: "Inter", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 48px 20px 80px;
+  }
+  .sheet {
+    width: 100%;
+    max-width: 720px;
+  }
+  header {
+    margin-bottom: 28px;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 18px;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--brass);
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 30px;
+    margin: 6px 0 4px;
+  }
+  .sub {
+    color: #4a5568;
+    font-size: 14px;
+    max-width: 52ch;
+  }
+  .ledger-line {
+    display: flex;
+    align-items: stretch;
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .ledger-line input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 16px 16px;
+    font-family: var(--sans);
+    font-size: 15px;
+    color: var(--ink);
+    outline: none;
+  }
+  .ledger-line button {
+    border: none;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0 22px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .ledger-line button:hover { background: var(--brass); }
+  .ledger-line button:disabled { background: var(--rule); cursor: progress; }
+
+  .examples {
+    margin: 12px 2px 0;
+    font-size: 12.5px;
+    color: #6b7280;
+  }
+  .examples button {
+    background: none;
+    border: none;
+    color: var(--brass);
+    text-decoration: underline;
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+    margin-right: 14px;
+  }
+
+  #result { margin-top: 32px; display: none; }
+
+  .statement {
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--ink);
+    border-radius: 3px;
+    padding: 20px 22px;
+    white-space: pre-wrap;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .statement.flagged { border-left-color: var(--flagged); }
+
+  .gauge-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 18px 2px 8px;
+  }
+  .gauge-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #4a5568;
+    white-space: nowrap;
+  }
+  .gauge-track {
+    flex: 1;
+    height: 8px;
+    background: var(--rule);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .gauge-fill {
+    height: 100%;
+    background: var(--grounded);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+  .gauge-fill.flagged { background: var(--flagged); }
+  .gauge-score {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    width: 44px;
+    text-align: right;
+  }
+
+  .sources-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #4a5568;
+    margin: 26px 2px 8px;
+  }
+  .source-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--rule);
+    font-size: 13.5px;
+  }
+  .source-item:last-child { border-bottom: none; }
+  .source-id {
+    font-family: var(--mono);
+    color: var(--brass);
+    white-space: nowrap;
+    font-size: 12.5px;
+  }
+  .source-excerpt { color: #4a5568; flex: 1; }
+  .source-score {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: #6b7280;
+    white-space: nowrap;
+  }
+
+  #loading, #error { margin-top: 24px; font-size: 14px; color: #4a5568; display: none; }
+  #error { color: var(--flagged); }
+
+  footer {
+    margin-top: 48px;
+    font-size: 12px;
+    color: #8b95a5;
+    font-family: var(--mono);
+  }
+</style>
+</head>
+<body>
+  <div class="sheet">
+    <header>
+      <div class="eyebrow">Retrieval-Augmented Generation · Internal Policy Desk</div>
+      <h1>Banking Policy &amp; Compliance Assistant</h1>
+      <div class="sub">Ask a question about wire transfers, holds, or disputes. Every answer is traced to a cited policy excerpt with a grounding-confidence score.</div>
+    </header>
+
+    <div class="ledger-line">
+      <input id="question" type="text" placeholder="e.g. What is the fee for an outgoing domestic wire transfer?" />
+      <button id="ask">Ask</button>
+    </div>
+    <div class="examples">
+      Try:
+      <button data-q="What is the fee for an outgoing domestic wire transfer?">wire transfer fee</button>
+      <button data-q="How long is a stop payment order valid on a paper check?">stop payment validity</button>
+      <button data-q="How many days do I have to submit a debit card dispute?">dispute window</button>
+    </div>
+
+    <div id="loading">Retrieving and grounding an answer…</div>
+    <div id="error"></div>
+
+    <div id="result">
+      <div id="statement" class="statement"></div>
+
+      <div class="gauge-row">
+        <span class="gauge-label">Grounding confidence</span>
+        <div class="gauge-track"><div id="gaugeFill" class="gauge-fill"></div></div>
+        <span id="gaugeScore" class="gauge-score"></span>
+      </div>
+
+      <div class="sources-title">Cited sources</div>
+      <div id="sources"></div>
+    </div>
+
+    <footer>banking-rag-assistant · FastAPI + LangChain + FAISS</footer>
+  </div>
+
+<script>
+  const API_BASE = window.location.origin;
+
+  const questionEl = document.getElementById("question");
+  const askBtn = document.getElementById("ask");
+  const loadingEl = document.getElementById("loading");
+  const errorEl = document.getElementById("error");
+  const resultEl = document.getElementById("result");
+  const statementEl = document.getElementById("statement");
+  const gaugeFillEl = document.getElementById("gaugeFill");
+  const gaugeScoreEl = document.getElementById("gaugeScore");
+  const sourcesEl = document.getElementById("sources");
+
+  document.querySelectorAll(".examples button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      questionEl.value = btn.dataset.q;
+      askQuestion();
+    });
+  });
+
+  askBtn.addEventListener("click", askQuestion);
+  questionEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") askQuestion();
+  });
+
+  async function askQuestion() {
+    const question = questionEl.value.trim();
+    if (question.length < 3) return;
+
+    errorEl.style.display = "none";
+    resultEl.style.display = "none";
+    loadingEl.style.display = "block";
+    askBtn.disabled = true;
+
+    try {
+      const resp = await fetch(`${API_BASE}/query`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
+      });
+
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        throw new Error(body.detail || `Request failed (${resp.status})`);
+      }
+
+      const data = await resp.json();
+      render(data);
+    } catch (err) {
+      errorEl.textContent = err.message || "Something went wrong.";
+      errorEl.style.display = "block";
+    } finally {
+      loadingEl.style.display = "none";
+      askBtn.disabled = false;
+    }
+  }
+
+  function render(data) {
+    statementEl.textContent = data.answer;
+    statementEl.classList.toggle("flagged", !data.grounded);
+
+    const pct = Math.max(0, Math.min(100, Math.round(data.confidence * 100)));
+    gaugeFillEl.style.width = pct + "%";
+    gaugeFillEl.classList.toggle("flagged", !data.grounded);
+    gaugeScoreEl.textContent = pct + "%";
+
+    sourcesEl.innerHTML = "";
+    data.sources.forEach((s) => {
+      const row = document.createElement("div");
+      row.className = "source-item";
+      row.innerHTML = `
+        <span class="source-id">${escapeHtml(s.chunk_id)}</span>
+        <span class="source-excerpt">${escapeHtml(s.excerpt)}</span>
+        <span class="source-score">${s.score.toFixed(3)}</span>
+      `;
+      sourcesEl.appendChild(row);
+    });
+
+    resultEl.style.display = "block";
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+</script>
+</body>
+</html>
