@@ -1,5 +1,9 @@
 # Banking Policy & Compliance RAG Assistant
 
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 ![Banking RAG Assistant architecture](docs/architecture.svg)
 
 A real-time Retrieval-Augmented Generation (RAG) application for banking policy questions. The responsive frontend sends live requests to FastAPI and returns grounded answers, confidence scores, and the exact policy excerpts used as evidence.
@@ -20,6 +24,10 @@ A real-time Retrieval-Augmented Generation (RAG) application for banking policy 
 
 ## Architecture
 
+The application has two independent workflows: offline document indexing and live question answering. This keeps query latency low and allows the knowledge base to be rebuilt whenever policies or embedding models change.
+
+See the [system architecture](docs/ARCHITECTURE.md) for GitHub-native diagrams, component responsibilities, design decisions, deployment guidance, and extension points.
+
 ```text
 Browser UI ── POST /query ──> FastAPI ──> RAG chain ──> FAISS index
     ^                                             │          │
@@ -28,7 +36,7 @@ Browser UI ── POST /query ──> FastAPI ──> RAG chain ──> FAISS in
 Browser UI ── GET /health ──> provider and index readiness
 ```
 
-The editable source illustration is [`docs/architecture.svg`](docs/architecture.svg).
+The overview image is maintained in [`docs/architecture.svg`](docs/architecture.svg).
 
 ## Run in real time
 
@@ -37,7 +45,7 @@ The editable source illustration is [`docs/architecture.svg`](docs/architecture.
 ```powershell
 python -m venv venv
 .\venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 python -m app.build_index
 uvicorn app.main:app --reload
@@ -48,7 +56,7 @@ uvicorn app.main:app --reload
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 cp .env.example .env
 python -m app.build_index
 uvicorn app.main:app --reload
