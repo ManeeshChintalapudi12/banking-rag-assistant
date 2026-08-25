@@ -1,3 +1,5 @@
+import pytest
+
 from app.embeddings import LocalHashingEmbeddings
 
 
@@ -20,3 +22,14 @@ def test_different_text_gives_different_vector():
     v1 = emb.embed_query("wire transfer")
     v2 = emb.embed_query("debit card dispute")
     assert v1 != v2
+
+
+@pytest.mark.parametrize("dims", [0, -1, 1.5, True])
+def test_embedding_rejects_invalid_dimensions(dims):
+    with pytest.raises(ValueError, match="positive integer"):
+        LocalHashingEmbeddings(dims=dims)
+
+
+def test_empty_text_returns_zero_vector():
+    emb = LocalHashingEmbeddings(dims=8)
+    assert emb.embed_query("") == [0.0] * 8

@@ -1,123 +1,118 @@
 # Banking Policy & Compliance RAG Assistant
 
-A Retrieval-Augmented Generation (RAG) service that answers questions about
-banking policies — wire transfers, Regulation CC holds, and Regulation E
-disputes — from a set of source documents, with **cited sources** and a
-**confidence score** so low-confidence answers can be routed to a human
-reviewer instead of presented as fact.
+![Banking RAG Assistant architecture](docs/architecture.svg)
 
-Built with **FastAPI**, **LangChain**, and **FAISS**.
+A real-time Retrieval-Augmented Generation (RAG) application for banking policy questions. The responsive frontend sends live requests to FastAPI and returns grounded answers, confidence scores, and the exact policy excerpts used as evidence.
 
-## Why this project
+## Built by
 
-Banking and financial-services teams increasingly use internal AI assistants
-to help staff navigate policy documents (wire limits, hold rules, dispute
-timelines) without hunting through PDFs. This project is a scoped-down,
-end-to-end reference implementation of that pattern: document ingestion →
-chunking → embedding → vector retrieval → grounded generation → citation →
-confidence-based escalation.
+**Maneesh** — full-stack AI application development, retrieval architecture, API integration, and frontend experience.
+
+## Features
+
+- Answers questions about wire transfers, account holds, and disputes.
+- Retrieves relevant chunks from a persisted FAISS index.
+- Supports zero-key local mode and an OpenAI-backed mode.
+- Shows cited policy evidence and match scores for every answer.
+- Flags low-confidence responses for human review.
+- Reports API, provider, and index status in the UI every 30 seconds.
+- Serves the frontend and API from one deployable application.
 
 ## Architecture
 
+```text
+Browser UI ── POST /query ──> FastAPI ──> RAG chain ──> FAISS index
+    ^                                             │          │
+    └── answer + confidence + cited sources ─────┘     policy docs
+
+Browser UI ── GET /health ──> provider and index readiness
 ```
-data/sample_docs/*.md   →  ingestion.py (load + chunk)
-                        →  embeddings.py (OpenAI or local hashing embedder)
-                        →  vectorstore.py (FAISS index, persisted to disk)
-                        →  rag_chain.py (retrieve top-k, generate grounded answer)
-                        →  main.py (FastAPI /query and /health endpoints)
-```
 
-## Running it locally (no API key required)
+The editable source illustration is [`docs/architecture.svg`](docs/architecture.svg).
 
-The project ships with `LLM_PROVIDER=local` by default, which uses a
-dependency-free deterministic embedding and an extractive answerer — so it
-runs and is fully testable with **zero external API keys**.
+## Run in real time
 
-```bash
-python3 -m venv venv
-source venv/bin/activate        # on Windows: venv\Scripts\activate
+### Windows PowerShell
+
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-
-cp .env.example .env
-
-python -m app.build_index        # builds the FAISS index from data/sample_docs
+Copy-Item .env.example .env
+python -m app.build_index
 uvicorn app.main:app --reload
 ```
 
-Then open **http://127.0.0.1:8000/docs** for interactive Swagger UI, or:
+### macOS or Linux
 
 ```bash
-curl -X POST http://127.0.0.1:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{"question": "What is the fee for an outgoing domestic wire transfer?"}'
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+python -m app.build_index
+uvicorn app.main:app --reload
 ```
 
-## Using a real LLM (OpenAI)
+Open **http://127.0.0.1:8000** for the application or **http://127.0.0.1:8000/docs** for the API reference.
 
-Set the following in `.env` and re-run `python -m app.build_index`:
+The default `LLM_PROVIDER=local` setting needs no API key. It uses deterministic local embeddings and an extractive answerer, so the entire UI-to-RAG flow works offline.
 
-```
+## Use OpenAI generation
+
+Set these values in `.env`, rebuild the index, and restart the server:
+
+```dotenv
 LLM_PROVIDER=openai
-OPENAI_API_KEY=sk-...
+OPENAI_API_KEY=your_api_key
+OPENAI_CHAT_MODEL=gpt-4o-mini
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 ```
 
-This switches both the embedding model and the answer generator to OpenAI,
-with the same grounding/citation-enforcing system prompt.
+Never commit `.env` or an API key.
 
-## Running with Docker
+## API
+
+`GET /health` returns the provider and index readiness.
+
+`POST /query` accepts:
+
+```json
+{
+  "question": "What is the fee for an outgoing domestic wire transfer?",
+  "top_k": 4
+}
+```
+
+The response contains `answer`, `grounded`, `confidence`, and `sources`.
+
+## Docker
 
 ```bash
 docker compose up --build
 ```
 
-## Running tests
+Then open **http://127.0.0.1:8000**.
+
+## Tests
 
 ```bash
-pytest -v
+python -m pytest -v
 ```
-
-## Key design choices
-
-- **Confidence-gated answers.** Every response includes a `confidence` score
-  derived from vector similarity. Below a threshold, the API flags the
-  answer as low-confidence and recommends human review rather than
-  presenting a guess as authoritative — a pattern used for high-stakes
-  domains like financial compliance.
-- **Citations by chunk id**, not just document name, so a reviewer can trace
-  an answer back to the exact paragraph it came from.
-- **Pluggable embedding/generation backend** so the same pipeline runs
-  offline for development/CI and against a real LLM in production without
-  changing any application code — only configuration.
 
 ## Project structure
 
-```
-.
-├── app/
-│   ├── main.py            # FastAPI app and routes
-│   ├── config.py          # environment-driven settings
-│   ├── ingestion.py        # document loading + chunking
-│   ├── embeddings.py       # OpenAI / local embedding backends
-│   ├── vectorstore.py      # FAISS build/load/persist
-│   ├── rag_chain.py        # retrieval + grounded generation
-│   ├── build_index.py      # CLI: build the index
-│   └── models.py           # Pydantic request/response schemas
-├── data/sample_docs/       # example banking policy documents
-├── tests/                  # pytest suite
-├── Dockerfile
-├── docker-compose.yml
-└── requirements.txt
+```text
+app/                FastAPI, RAG, ingestion, embeddings, and FAISS
+data/sample_docs/   Example banking policy knowledge base
+docs/               Architecture image and project visuals
+tests/              API, ingestion, and embedding tests
+ui/index.html       Responsive real-time frontend
 ```
 
-## Possible extensions
+## Safety model
 
-- Swap FAISS for a managed vector DB (Pinecone, Azure AI Search) for
-  multi-instance deployments.
-- Add hybrid (keyword + vector) retrieval and re-ranking.
-- Add an evaluation harness (groundedness/relevance scoring) over a curated
-  test question set.
-- Add role-based access control so different policy sets are scoped to
-  different user roles.
+This is a reference assistant, not a replacement for policy owners or legal/compliance review. Answers below the confidence threshold are marked for human review, and every response exposes its supporting evidence.
 
 ## License
 

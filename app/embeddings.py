@@ -13,8 +13,6 @@ Two implementations of the LangChain `Embeddings` interface:
 import hashlib
 import math
 import re
-from typing import List
-
 from langchain_core.embeddings import Embeddings
 
 from app.config import settings
@@ -35,7 +33,7 @@ _STOPWORDS = frozenset(
 )
 
 
-def _tokenize(text: str) -> List[str]:
+def _tokenize(text: str) -> list[str]:
     return [t for t in _TOKEN_RE.findall(text.lower()) if t not in _STOPWORDS]
 
 
@@ -48,10 +46,12 @@ class LocalHashingEmbeddings(Embeddings):
     short policy documents, entirely offline.
     """
 
-    def __init__(self, dims: int = 512):
+    def __init__(self, dims: int = 512) -> None:
+        if isinstance(dims, bool) or not isinstance(dims, int) or dims <= 0:
+            raise ValueError("dims must be a positive integer")
         self.dims = dims
 
-    def _embed(self, text: str) -> List[float]:
+    def _embed(self, text: str) -> list[float]:
         vec = [0.0] * self.dims
         for token in _tokenize(text):
             h = int(hashlib.md5(token.encode("utf-8")).hexdigest(), 16)
@@ -61,15 +61,16 @@ class LocalHashingEmbeddings(Embeddings):
         norm = math.sqrt(sum(v * v for v in vec)) or 1.0
         return [v / norm for v in vec]
 
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
         return [self._embed(t) for t in texts]
 
-    def embed_query(self, text: str) -> List[float]:
+    def embed_query(self, text: str) -> list[float]:
         return self._embed(text)
 
 
 def get_embeddings() -> Embeddings:
-    if settings.LLM_PROVIDER == "openai":
+    provider = settings.LLM_PROVIDER.strip().lower()
+    if provider == "openai":
         from langchain_openai import OpenAIEmbeddings
 
         if not settings.OPENAI_API_KEY:
@@ -81,4 +82,9 @@ def get_embeddings() -> Embeddings:
             model=settings.OPENAI_EMBEDDING_MODEL,
             api_key=settings.OPENAI_API_KEY,
         )
-    return LocalHashingEmbeddings()
+    if provider == "local":
+        return LocalHashingEmbeddings()
+    raise ValueError(
+        f"Unsupported LLM_PROVIDER={settings.LLM_PROVIDER!r}. "
+        "Choose 'local' or 'openai'."
+    )
