@@ -51,3 +51,21 @@ def test_query_on_unrelated_question_is_flagged_low_confidence():
 def test_query_rejects_too_short_question():
     resp = client.post("/query", json={"question": "hi"})
     assert resp.status_code == 422
+
+
+def test_query_rejects_whitespace_only_question():
+    # Three spaces satisfy the raw min_length=3, so without stripping
+    # this would reach retrieval and waste an embedding lookup.
+    resp = client.post("/query", json={"question": "   "})
+    assert resp.status_code == 422
+
+
+def test_query_trims_surrounding_whitespace():
+    resp = client.post(
+        "/query",
+        json={"question": "   What is the fee for an outgoing domestic wire transfer?   "},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["sources"]) > 0
+    assert body["sources"][0]["source"] == "wire_transfer_policy.md"
